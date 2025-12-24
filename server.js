@@ -931,6 +931,7 @@ if (useHttpTransport) {
         transportType: 'httpStream',
         httpStream: {
             port: httpPort,
+            host: '0.0.0.0',
             endpoint: '/mcp',
         }
     });

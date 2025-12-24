@@ -151,12 +151,6 @@ const useHttpTransport = !!process.env.MCP_HTTP_PORT;
 let server = new FastMCP({
     name: 'Bright Data',
     version: package_json.version,
-    health: {
-        enabled: true,
-        path: '/health',
-        message: 'ok',
-        status: 200
-    }
 });
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
@@ -926,14 +920,79 @@ server.on('connect', (event)=>{
 });
 
 if (useHttpTransport) {
-    console.error(`Starting server with HTTP streaming on port ${httpPort}...`);
+    console.error(`Starting server with HTTP streaming...`);
+    
+    // Start FastMCP on internal port
+    const internalPort = 3001;
     server.start({
         transportType: 'httpStream',
         httpStream: {
-            port: httpPort,
-            host: '0.0.0.0',
+            port: internalPort,
+            host: '127.0.0.1',
             endpoint: '/mcp',
         }
+    });
+    console.error(`FastMCP running internally on port ${internalPort}`);
+    
+    // Create Express wrapper on external port for health + proxy
+    import('express').then(async (expressModule) => {
+        const express = expressModule.default;
+        const http = await import('http');
+        const app = express();
+        
+        // Health endpoint
+        app.get('/health', (req, res) => {
+            res.json({ 
+                status: 'healthy',
+                server: 'brightdata-mcp',
+                version: package_json.version,
+                transport: 'http'
+            });
+        });
+        
+        // Root endpoint for basic info
+        app.get('/', (req, res) => {
+            res.json({
+                name: 'Bright Data MCP Server',
+                version: package_json.version,
+                endpoints: {
+                    mcp: '/mcp',
+                    health: '/health'
+                }
+            });
+        });
+        
+        // Proxy /mcp to FastMCP
+        app.all('/mcp', (req, res) => {
+            const options = {
+                hostname: '127.0.0.1',
+                port: internalPort,
+                path: '/mcp',
+                method: req.method,
+                headers: {
+                    ...req.headers,
+                    host: `127.0.0.1:${internalPort}`
+                }
+            };
+            
+            const proxyReq = http.request(options, (proxyRes) => {
+                res.writeHead(proxyRes.statusCode, proxyRes.headers);
+                proxyRes.pipe(res);
+            });
+            
+            proxyReq.on('error', (e) => {
+                console.error(`Proxy error: ${e.message}`);
+                res.status(502).json({ error: 'Proxy error', message: e.message });
+            });
+            
+            req.pipe(proxyReq);
+        });
+        
+        app.listen(httpPort, '0.0.0.0', () => {
+            console.error(`Express wrapper listening on 0.0.0.0:${httpPort}`);
+            console.error(`Health: http://0.0.0.0:${httpPort}/health`);
+            console.error(`MCP: http://0.0.0.0:${httpPort}/mcp`);
+        });
     });
 } else {
     console.error('Starting server with stdio transport...');

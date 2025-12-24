@@ -145,9 +145,18 @@ async function ensure_required_zones(){
 
 await ensure_required_zones();
 
+const httpPort = parseInt(process.env.MCP_HTTP_PORT || '3000');
+const useHttpTransport = !!process.env.MCP_HTTP_PORT;
+
 let server = new FastMCP({
     name: 'Bright Data',
     version: package_json.version,
+    health: {
+        enabled: true,
+        path: '/health',
+        message: 'ok',
+        status: 200
+    }
 });
 let debug_stats = {tool_calls: {}, session_calls: 0, call_timestamps: []};
 
@@ -916,17 +925,13 @@ server.on('connect', (event)=>{
         global.mcpClientInfo = clientInfo;
 });
 
-// Determine transport type from environment
-const transportType = process.env.MCP_HTTP_PORT ? 'sse' : 'stdio';
-const httpPort = parseInt(process.env.MCP_HTTP_PORT || '3000');
-
-if (transportType === 'sse') {
-    console.error(`Starting server with SSE transport on port ${httpPort}...`);
+if (useHttpTransport) {
+    console.error(`Starting server with HTTP streaming on port ${httpPort}...`);
     server.start({
-        transportType: 'sse',
-        sse: {
-            endpoint: '/sse',
+        transportType: 'httpStream',
+        httpStream: {
             port: httpPort,
+            endpoint: '/mcp',
         }
     });
 } else {

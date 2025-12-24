@@ -22,7 +22,7 @@ ENV NODE_ENV=production
 ENV MCP_HTTP_PORT=3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:${MCP_HTTP_PORT}/sse || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:${MCP_HTTP_PORT}/health || exit 1
 
 EXPOSE 3000
 

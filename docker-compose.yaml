@@ -13,7 +13,7 @@ services:
       - WEB_UNLOCKER_ZONE=${WEB_UNLOCKER_ZONE:-mcp_unlocker}
       - BROWSER_ZONE=${BROWSER_ZONE:-mcp_browser}
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/sse"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
       interval: 30s
       timeout: 5s
       retries: 3

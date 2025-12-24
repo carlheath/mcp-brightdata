@@ -1,0 +1,21 @@
+services:
+  mcp-brightdata:
+    build: .
+    expose:
+      - "3000"
+    environment:
+      - API_TOKEN=${API_TOKEN}
+      - MCP_HTTP_PORT=3000
+      - PRO_MODE=${PRO_MODE:-false}
+      - GROUPS=${GROUPS:-}
+      - TOOLS=${TOOLS:-}
+      - RATE_LIMIT=${RATE_LIMIT:-}
+      - WEB_UNLOCKER_ZONE=${WEB_UNLOCKER_ZONE:-mcp_unlocker}
+      - BROWSER_ZONE=${BROWSER_ZONE:-mcp_browser}
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/sse"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped

@@ -916,7 +916,23 @@ server.on('connect', (event)=>{
         global.mcpClientInfo = clientInfo;
 });
 
-server.start({transportType: 'stdio'});
+// Determine transport type from environment
+const transportType = process.env.MCP_HTTP_PORT ? 'sse' : 'stdio';
+const httpPort = parseInt(process.env.MCP_HTTP_PORT || '3000');
+
+if (transportType === 'sse') {
+    console.error(`Starting server with SSE transport on port ${httpPort}...`);
+    server.start({
+        transportType: 'sse',
+        sse: {
+            endpoint: '/sse',
+            port: httpPort,
+        }
+    });
+} else {
+    console.error('Starting server with stdio transport...');
+    server.start({transportType: 'stdio'});
+}
 function tool_fn(name, fn){
     return async(data, ctx)=>{
         check_rate_limit();
